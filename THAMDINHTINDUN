@@ -1,0 +1,93 @@
+import streamlit as st
+
+# Cấu hình giao diện trang
+st.set_page_config(
+    page_title="Ứng dụng Tính Chỉ số DTI",
+    page_icon="💳",
+    layout="centered"
+)
+
+st.title("💳 Ứng dụng Tính toán Chỉ số DTI Vay Vốn")
+st.markdown("Nhập thông tin tài chính bên dưới để kiểm tra khả năng được duyệt vay.")
+
+# Form nhập liệu
+with st.form("dti_form"):
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        stv = st.number_input(
+            "Số tiền vay (STV - VND)", 
+            min_value=0.0, 
+            value=800_000_000.0, 
+            step=10_000_000.0, 
+            format="%.0f"
+        )
+        thv = st.number_input(
+            "Thời hạn vay (THV - Năm)", 
+            min_value=1, 
+            value=5, 
+            step=1
+        )
+        ls_percent = st.number_input(
+            "Lãi suất vay (%/năm)", 
+            min_value=0.0, 
+            value=12.0, 
+            step=0.1, 
+            format="%.2f"
+        )
+        tn = st.number_input(
+            "Thu nhập hàng tháng (TN - VND)", 
+            min_value=0.0, 
+            value=45_000_000.0, 
+            step=1_000_000.0, 
+            format="%.0f"
+        )
+        
+    with col2:
+        nc = st.number_input(
+            "Nợ cũ hàng tháng (NC - VND)", 
+            min_value=0.0, 
+            value=10_000_000.0, 
+            step=1_000_000.0, 
+            format="%.0f"
+        )
+        cpsh = st.number_input(
+            "Chi phí sinh hoạt mỗi người (CPSH - VND)", 
+            min_value=0.0, 
+            value=4_000_000.0, 
+            step=500_000.0, 
+            format="%.0f"
+        )
+        sn = st.number_input(
+            "Số người trong gia đình (SN)", 
+            min_value=1, 
+            value=3, 
+            step=1
+        )
+        
+    submitted = st.form_submit_button("Tính toán và Thẩm định DTI")
+
+if submitted:
+    # Chuyển đổi lãi suất phần trăm sang dạng số thập phân (ví dụ: 12% -> 0.12)
+    ls = ls_percent / 100.0
+    
+    # Kiểm tra mẫu số tránh lỗi chia cho 0 hoặc số âm
+    mau_so = tn - (cpsh * sn)
+    
+    if mau_so <= 0:
+        st.error("⚠️ Thu nhập sau khi trừ chi phí sinh hoạt gia đình không đủ hoặc bằng 0, không thể tính toán chỉ số DTI hợp lệ.")
+    else:
+        # Tính toán chỉ số DTI theo công thức
+        dti = ((stv / (thv * 12) + stv * (ls / 12)) + nc) / mau_so
+        
+        st.markdown("---")
+        st.subheader("Kết quả Thẩm định")
+        
+        # Hiển thị kết quả dạng metric
+        st.metric(label="Chỉ số DTI (Debt-to-Income)", value=f"{dti * 100:.2f}%")
+        
+        # Đưa ra kết luận dựa trên điều kiện DTI < 0.7 (70%)
+        if dti < 0.7:
+            st.success("🎉 **ĐƯỢC VAY** - Khách hàng đủ điều kiện vay vốn (Chỉ số DTI < 70%).")
+        else:
+            st.error("❌ **KHÔNG ĐƯỢC VAY** - Tỷ lệ nợ trên thu nhập vượt mức giới hạn cho phép (Chỉ số DTI >= 70%).")
